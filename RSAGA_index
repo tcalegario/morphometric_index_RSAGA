@@ -1,0 +1,333 @@
+####Morphometric variables SAGA-GIS by RSAGA
+#for more information: https://cran.r-project.org/web/packages/RSAGA/vignettes/RSAGA.html
+
+
+#####TIPS
+
+#It's possible to obtain each morphometric variable by time or use the function bellow to obtain all in once. 
+#For obtain one by step it's necessary to define "dem" and "outdir" before the "morfometricas_saga" function and apply each Saga function separated.
+#dem = digital elevation model file with directory path together with the name and extension (i.e. "./Arquivos_Arthur/GTOPO30/mde_conformal_lambert_cond0_mask.tif")
+#outdir = output directory (i.e. "./Arquivos_Arthur/GTOPO30/morfometricas/")
+#all ".sdat" are converted to ".tif" at final step
+
+#Script made by Elpídio Inácio Fernandes-Filho, Adriano Luis Schunemann and Arthur Telles Calegario.
+#Anydoubt tcalegario@gmail.com
+
+getwd()
+require(RSAGA)
+require(raster)
+env <- rsaga.env()
+
+
+morfometricas_saga = function(dem, outdir) {  #R function 
+  
+  
+  rsaga.slope.asp.curv (in.dem = dem,
+                        out.slope = paste(outdir,"slope_degress",sep = ""),
+                        out.aspect = paste(outdir,"aspect",sep = ""),
+                        out.cgene = paste(outdir,"curv_general",sep = ""),
+                        out.cprof = paste(outdir,"curv_profile",sep = ""),
+                        out.cplan = paste(outdir,"curv_plan",sep = ""),
+                        out.ctang = paste(outdir,"curv_tangencial",sep = ""),
+                        out.clong = paste(outdir,"curv_longitudinal",sep = ""),
+                        out.ccros = paste(outdir,"curv_cross_sectional",sep = ""),
+                        out.cmini = paste(outdir,"curv_minimal",sep = "" ),
+                        out.cmaxi = paste(outdir,"curv_maximal",sep = ""), 
+                        out.ctota = paste(outdir,"curv_total",sep = ""),
+                        out.croto = paste(outdir,"curv_flow_line",sep = ""),
+                        method = "poly2zevenbergen",
+                        unit.slope = "degrees", unit.aspect = "degrees", env = rsaga.env(), flags = "s")
+  
+  
+  print("slope, aspect e curvatures Finished")
+  
+  #Convergence index
+  
+  rsaga.geoprocessor("ta_morphometry", module = 1,
+                     list(ELEVATION = dem,
+                          RESULT = paste(outdir,"convergence_index",sep = ""),
+                          METHOD = "Aspect",
+                          NEIGHBOURS = "1"), flags = "s")
+  
+  print("Convergence_index Finished")
+  
+  #Surface Specific Points
+  
+  # rsaga.get.usage("ta_morphometry", module = "3", env = env)
+  rsaga.geoprocessor("ta_morphometry", module = 3,list(ELEVATION = dem,
+                                                       RESULT = paste(outdir,"surface_specific_points",sep = ""),
+                                                       METHOD = "1",
+                                                       THRESHOLD = 2), flags = "s")
+  
+  print("Surface_specific_points  Finished")
+  
+  #curvature Classification
+  
+  rsaga.geoprocessor("ta_morphometry",
+                     module = 4,
+                     list(DEM = dem,
+                          CLASS = paste(outdir,"curvature_classification",sep = ""),
+                          THRESHOLD = 0.05), flags = "s")
+  
+  print("Curvature_classification  Finished")
+  
+  #real surface area
+  
+  rsaga.geoprocessor("ta_morphometry",
+                     module = 6,
+                     list(DEM = dem,
+                          AREA = paste(outdir,"real_surface_area",sep = "")), flags = "s")
+  
+  print("Real Surface area  Finished")
+  
+  #Morphometric Protection Index
+  
+  rsaga.geoprocessor("ta_morphometry",
+                     module = 7,
+                     list(DEM = dem,
+                          PROTECTION = paste(outdir,"morphometric_protection_index",sep = ""),
+                          RADIUS = 2000), flags = "s")
+  
+  print("Morphometric_Protection_index  Finished")
+  
+  #Multiresolution Index of Valley Bottom Flatness (MRVBF)
+  
+  rsaga.geoprocessor("ta_morphometry",
+                     module = 8,
+                     list(DEM = dem,
+                          MRVBF = paste(outdir,"MRVBF",sep = ""),
+                          MRRTF = paste(outdir,"MRRTF",sep = ""),
+                          T_SLOPE = 16,
+                          T_PCTL_V = 0.4,
+                          T_PCTL_R = 0.35,
+                          P_SLOPE = 4,
+                          P_PCTL = 3,
+                          UPDATE = 1,
+                          CLASSIFY = 0,
+                          MAX_RES = 50), flags = "s")
+  
+  print(c("MRVBF and MRRTF Finished"))
+  
+  #Downslope Distance Gradient
+  
+  rsaga.geoprocessor("ta_morphometry",
+                     module = 9,
+                     list(DEM = dem,
+                          GRADIENT = paste(outdir,"gradient",sep = ""),
+                          DIFFERENCE = paste(outdir,"difference",sep = ""),
+                          DISTANCE = 10,
+                          OUTPUT = 2), flags = "s")
+  
+  print("Downslope Distance Gradient Finished")
+  
+  #Mass Balance Index
+  
+  rsaga.geoprocessor("ta_morphometry",
+                     module = 10,
+                     list(DEM = dem,
+                          MBI = paste(outdir,"Mass_balance_index",sep = ""),
+                          TSLOPE = 15,
+                          TCURVE = 0.01,
+                          THREL = 15), flags = "s")
+  
+  print("Mass Balance Index Finished")
+  
+  #Effective Air Flow Heights 
+  
+  rsaga.geoprocessor("ta_morphometry",
+                     module = 11,
+                     list(DEM = dem,
+                          AFH = paste(outdir,"effective_air_flow_heights",sep = ""),
+                          LUV = 1), flags = "s")
+  
+  print("Effective Air Flow Heights Finished")
+  
+  #Diurnal Anisotropic Heat
+  
+  rsaga.geoprocessor("ta_morphometry",
+                     module = 12,
+                     list(DEM = dem,
+                          DAH = paste(outdir,"diurnal_anisotropic_heat",sep = ""),
+                          ALPHA_MAX = 202.5), flags = "s")
+  
+  
+  print("Diurnal Anisotropic Heat Finished")
+  
+  #Relative Heights and Slope Positions
+  
+  rsaga.geoprocessor("ta_morphometry",
+                     module = 14,
+                     list(DEM = dem,
+                          HO = paste(outdir,"slope_height",sep = ""),
+                          HU = paste(outdir,"valley_depth",sep = ""),
+                          NH = paste(outdir,"normalized_height",sep = ""),
+                          SH = paste(outdir,"standardized_height",sep = ""),
+                          MS = paste(outdir,"mid_slope_position",sep = ""),
+                          W = 0.5,
+                          T = 10,
+                          E = 2), flags = "s")
+  
+  print("Relative Heights and Slope Positions Finished")
+  
+  #Terrain Ruggedness Index (TRI) 
+  
+  rsaga.geoprocessor("ta_morphometry",
+                     module = 16,
+                     list(DEM = dem,
+                          TRI = paste(outdir,"terrain_ruggedness_index",sep = ""),
+                          MODE = 1,
+                          RADIUS = 1,
+                          DW_WEIGHTING = 0,
+                          DW_IDW_POWER = 1,
+                          DW_IDW_OFFSET = 1,
+                          DW_BANDWIDTH = 1), flags = "s")
+  
+  print("Terrain Ruggedness Index Finished")
+  
+  #Vector Ruggedness Measure
+  
+  rsaga.geoprocessor("ta_morphometry",
+                     module = 17,
+                     list(DEM = dem,
+                          VRM = paste(outdir,"vector_ruggedness_index",sep = ""),
+                          MODE = 1,
+                          RADIUS = 1,
+                          DW_WEIGHTING = 0,
+                          DW_IDW_POWER = 1,
+                          DW_IDW_OFFSET = 1,
+                          DW_BANDWIDTH = 1), flags = "s")
+  
+  print("Vector Ruggedness Measure Finished")
+  
+  #Topographic Position Index (TPI)
+  
+  rsaga.geoprocessor("ta_morphometry",
+                     module = 18,
+                     list(DEM = dem,
+                          TPI = paste(outdir,"topographic_position_index",sep = ""),
+                          STANDARD = 0,
+                          RADIUS_MIN = 0,
+                          RADIUS_MAX = 100,
+                          DW_WEIGHTING = 0,
+                          DW_IDW_POWER = 1,
+                          DW_IDW_OFFSET = 1,
+                          DW_BANDWIDTH = 75), flags = "s")
+  
+  print("Topographic Position Index Finished")
+  
+  # TPI Based Landform Classification
+  
+  rsaga.geoprocessor("ta_morphometry",
+                     module = 19,
+                     list(DEM = dem,
+                          LANDFORMS = paste(outdir,"landforms_tpi_based",sep = ""),
+                          RADIUS_A_MIN = 0,
+                          RADIUS_A_MAX = 100,
+                          RADIUS_B_MIN = 0,
+                          RADIUS_B_MAX = 1000,
+                          DW_WEIGHTING = 0,
+                          DW_IDW_POWER = 1,
+                          DW_IDW_OFFSET = 1,
+                          DW_BANDWIDTH= 75), flags = "s")
+  
+  print("TPI Based Landform Classification Finished")
+  
+  #  Terrain Surface Texture 
+  
+  rsaga.geoprocessor("ta_morphometry",
+                     module = 20,
+                     list(DEM = dem,
+                          TEXTURE = paste(outdir,"terrain_surface_texture",sep = ""),
+                          EPSILON = 1,
+                          SCALE = 10,
+                          METHOD = 1,
+                          DW_WEIGHTING = 3,
+                          DW_IDW_POWER = 1,
+                          DW_IDW_OFFSET = 1,
+                          DW_BANDWIDTH= 0.7), flags = "s")
+  
+  print("Terrain Surface Texture Finished")
+  
+  #  Terrain Surface Convexity
+  
+  rsaga.geoprocessor("ta_morphometry",
+                     module = 21,
+                     list(DEM = dem,
+                          CONVEXITY = paste(outdir,"terrain_surface_convexity",sep = ""),
+                          KERNEL = 0,
+                          TYPE = 0,
+                          EPSILON = 0,
+                          SCALE = 3,
+                          METHOD = 1,
+                          DW_WEIGHTING = 3,
+                          DW_IDW_POWER= 1,
+                          DW_IDW_OFFSET = 1,
+                          DW_BANDWIDTH = 0.7), flags = "s")
+  
+  print("Terrain Surface Convexity Finished")
+  
+  #Terrain Surface Classification (Iwahashi and Pike)
+  
+  
+  rsaga.geoprocessor("ta_morphometry",
+                     module = 22,
+                     list(DEM = dem,
+                          LANDFORMS = paste(outdir,"terrain_surface_classification_iwahashi",sep = ""),
+                          CONV_RECALC = 0,
+                          TEXTURE = 0,
+                          TEXT_RECALC = 0,
+                          TYPE = 2,
+                          CONV_SCALE = 10,
+                          CONV_KERNEL = 0,
+                          CONV_TYPE= 0,
+                          CONV_EPSILON = 0,
+                          TEXT_SCALE = 2,
+                          TEXT_EPSILON = 1), flags = "s")
+  
+  print("Terrain Surface Classification (Iwahashi and Pike)")
+  
+  #Valley and Ridge Detection (Top Hat Approach)
+  
+  
+  rsaga.geoprocessor("ta_morphometry",
+                     module = 24,
+                     list(DEM = dem,
+                          VALLEY = paste(outdir,"valley",sep = ""),
+                          HILL = paste(outdir,"hill",sep = ""),
+                          VALLEY_IDX = paste(outdir,"valley_idx",sep = ""),
+                          HILL_IDX = paste(outdir,"hill_idx",sep = ""),
+                          SLOPE_IDX = paste(outdir,"slope_idx",sep = ""),
+                          RADIUS_VALLEY = 1000,
+                          RADIUS_HILL = 1000,
+                          THRESHOLD= 100,
+                          METHOD = 0), flags = "s")
+  
+  print("Valley and Ridge Detection (Top Hat Approach) Finished")
+  
+  rsaga.wetness.index(in.dem = dem, out.wetness.index = paste(outdir,"saga_wetness_index",sep = ""), flags = "s")
+  
+  print("Saga Wetness Index Finished")
+  
+  #Import sdat file and convert to .tif (sdat files are deleted)
+  
+  result_list = list.files(outdir, pattern = ".sdat$", full.names = TRUE)
+  result_rasters = lapply(result_list, raster)
+  result_list_tif = gsub(pattern = "sdat", "tif", result_list)
+  
+  for (i in 1:length(result_rasters)){
+    writeRaster(result_rasters[[i]], result_list_tif[[i]], overwrite = TRUE)
+    file.remove(result_list[[i]])
+    
+  }
+  
+  remove(result_rasters, result_list_tif, result_list) #remove lists from R environment
+  
+}
+
+#using function
+
+morfometricas_saga(dem = "./Arquivos_Arthur/GTOPO30/mde_conformal_lambert_cond0_mask.tif",
+                   outdir = "./Arquivos_Arthur/GTOPO30/morfometricas/")
+
+
+
